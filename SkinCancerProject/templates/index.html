@@ -12,33 +12,49 @@
     <h1>تشخیص هوشمند ضایعات پوستی</h1>
     <p class="subtitle">تصویر واضح از ضایعه پوستی بارگذاری کنید</p>
 
-    <form action="/predict" method="post" enctype="multipart/form-data" id="form">
+    <form action="/predict" method="post" id="form">
 
         <label class="upload-box">
-            <input type="file" name="file" accept="image/*" required onchange="previewImage(event)">
+            <input type="file" accept="image/*" required onchange="handleImage(this)">
             <span>📷 انتخاب تصویر</span>
         </label>
 
-        <img id="preview">
+        <!-- Base64 تصویر -->
+        <input type="hidden" name="image_base64" id="image_base64">
+
+        <!-- نمایش تصویر -->
+        {% if image_base64 %}
+            <img src="{{ image_base64 }}" id="preview" style="display:block;">
+        {% else %}
+            <img id="preview">
+        {% endif %}
 
         <button type="submit" id="btn">تحلیل تصویر</button>
     </form>
 
     {% if result %}
     <div class="result {{ risk }}">
-    <h2>نتیجه تشخیص</h2>
-    <p>{{ result }}</p>
-    <p>⚡ میزان اطمینان مدل: {{ confidence }}%</p>
+        <h2>نتیجه تشخیص</h2>
+        <p>{{ result }}</p>
+        <p>میزان اطمینان مدل: {{ confidence }}%</p>
     </div>
     {% endif %}
 
 </div>
 
 <script>
-function previewImage(event) {
-    const img = document.getElementById("preview");
-    img.src = URL.createObjectURL(event.target.files[0]);
-    img.style.display = "block";
+function handleImage(input) {
+    const file = input.files[0];
+    const reader = new FileReader();
+
+    reader.onload = function () {
+        const base64 = reader.result;
+        document.getElementById("preview").src = base64;
+        document.getElementById("preview").style.display = "block";
+        document.getElementById("image_base64").value = base64;
+    };
+
+    reader.readAsDataURL(file);
 }
 
 document.getElementById("form").onsubmit = () => {

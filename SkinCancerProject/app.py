@@ -3,7 +3,8 @@ from PIL import Image
 import torch
 from torchvision import transforms, models
 import os
-
+import base64
+import io
 app = Flask(__name__)
 #
 # # مسیر مدل آموزش دیده (فرض کنیم اسم فایل skin_cancer_model.pth است)
@@ -41,15 +42,22 @@ LABELS_FA = {
 
 @app.route("/predict", methods=["POST"])
 def predict():
-    if "file" not in request.files:
-        return "فایلی آپلود نشده است", 400
+    # if "file" not in request.files:
+    #     return "فایلی آپلود نشده است", 400
+    # file = request.files["file"]
+    image_base64 = request.form.get("image_base64")
 
-    file = request.files["file"]
-    img = Image.open(file).convert("RGB")
-    img = transform(img).unsqueeze(0).to(device)
+    if not image_base64:
+        return "تصویری ارسال نشده است", 400
+
+    # decode base64
+    image_bytes = base64.b64decode(image_base64.split(",")[1])
+    img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+
+    img_tensor = transform(img).unsqueeze(0).to(device)
 
     with torch.no_grad():
-        output = model(img)
+        output = model(img_tensor)
         probabilities = torch.softmax(output, dim=1)  # محاسبه احتمال هر کلاس
         pred = torch.argmax(probabilities, dim=1).item()
         confidence = probabilities[0, pred].item() * 100  # درصد اطمینان
@@ -64,7 +72,7 @@ def predict():
         risk = "low"
 
     # ارسال result و confidence به HTML
-    return render_template("index.html", result=result_fa, risk=risk, confidence=round(confidence, 2))
+    return render_template("index.html", result=result_fa, risk=risk, confidence=round(confidence, 2),image_base64=image_base64)
 
 
 
